@@ -1,4 +1,16 @@
 const log = (val: any) => console.assert(Bun.env.PRODUCTION === "true", val);
+const endpointLog = (
+  val: { status?: number; method?: string; path?: string } & { now?: string }
+) => {
+  val = {
+    now: new Date().toLocaleTimeString(),
+    status: 200,
+    method: "GET",
+    path: "/",
+    ...val,
+  };
+  return log(`${val.now}: ${val.status} ${val.method} ${val.path}`);
+};
 
 export class Req extends Request {
   public params: { [key: string]: string } = {};
@@ -26,6 +38,7 @@ export type Endpoint = {
   path: string; // /blog/:id
   handler: (req: Req) => Res;
   pathArr?: (string | any)[]; // ['blog', ':id']
+  method?: string;
 };
 
 /**
@@ -66,6 +79,18 @@ export class Endpoints extends ImmutableArr<Endpoint> {
     return endpoint;
   }
 }
+
+const Params = {
+  fromPathArray(endpointPath: string[], requestPath: string[]) {
+    const params: { [key: string]: string } = {};
+    endpointPath.forEach((p, i) => {
+      if (!p.startsWith(":")) return;
+      params[p.slice(1)] = requestPath[i];
+    });
+    return params;
+  },
+};
+
 export class Router {
   endpoints: Endpoints = new Endpoints();
 
@@ -95,23 +120,25 @@ export class Router {
     const pathArr = path.split("/");
 
     const endpoint = this.endpoints.getByPath(path);
-    if (!endpoint) return new Res("Not found", { status: 404 });
+    if (!endpoint) {
+      endpointLog({ status: 404, method: req.method, path: pathArr.join("/") });
+      return new Res("Not found", { status: 404 });
+    }
+    if (req.method !== endpoint.method) {
+      endpointLog({ status: 405, method: req.method, path: pathArr.join("/") });
+      return new Res("Method not allowed", { status: 405 });
+    }
 
-    const params: { [key: string]: string } = {};
-    endpoint.pathArr?.forEach((p, i) => {
-      if (!p.startsWith(":")) return;
-      params[p.slice(1)] = pathArr[i];
-    });
     const request = new Req(req);
-    request.params = params;
+    request.params = Params.fromPathArray(endpoint.pathArr ?? [], pathArr);
     request.query = Object.fromEntries(query.entries());
     const response = endpoint.handler(request);
 
-    log(
-      `${new Date().toLocaleTimeString()}: ${response.status} ${
-        req.method
-      } ${pathArr.join("/")}`
-    );
+    endpointLog({
+      status: response.status,
+      method: req.method,
+      path: pathArr.join("/"),
+    });
     return response;
   }
 }
@@ -125,23 +152,23 @@ export const http = {
   router: new Router(),
 
   get(path: string, handler: (req: Req) => Res) {
-    this.router.endpoints.push({ path, handler });
+    this.router.endpoints.push({ path, handler, method: "GET" });
   },
 
   post(path: string, handler: (req: Req) => Res) {
-    this.router.endpoints.push({ path, handler });
+    this.router.endpoints.push({ path, handler, method: "POST" });
   },
 
   put(path: string, handler: (req: Req) => Res) {
-    this.router.endpoints.push({ path, handler });
+    this.router.endpoints.push({ path, handler, method: "PUT" });
   },
 
   delete(path: string, handler: (req: Req) => Res) {
-    this.router.endpoints.push({ path, handler });
+    this.router.endpoints.push({ path, handler, method: "DELETE" });
   },
 
   patch(path: string, handler: (req: Req) => Res) {
-    this.router.endpoints.push({ path, handler });
+    this.router.endpoints.push({ path, handler, method: "PATCH" });
   },
 
   serve(opts = defaultServeOptions) {
