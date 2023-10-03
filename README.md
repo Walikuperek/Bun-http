@@ -3,7 +3,7 @@
 Very fast HTTP server library based on Bun. Feel free to use it in your projects. Just copy the `lib/src/http.ts` file into your project.
 
 ```
-[!] To disable the HTTP server logs create .env file next to package.json, inside your .env file set the PRODUCTION=true environment variable.
+[!] To disable development mode inside your .env file set the PRODUCTION=true environment variable.
 ```
 
 ## Usage
@@ -37,8 +37,13 @@ bun main.ts
     8:27:48 PM: 200 GET /
     8:27:52 PM: 405 GET /blog/123
     8:27:56 PM: 200 POST /blog/123
+    8:27:58 PM: 200 GET /__endpoints
 */
 ```
+
+Endpoints list is available at `/__endpoints` only in development mode.
+
+![Alt text](/assets/admin_endpoints.png)
 
 To install dependencies:
 
