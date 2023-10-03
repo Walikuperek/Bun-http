@@ -77,22 +77,16 @@ export class Router {
     const path = url.pathname;
     const query = url.searchParams;
     const pathArr = path.split("/");
+    const log = (status: number) =>
+      reqLog({ status, method: req.method, path });
 
     const endpoint = this.endpoints.getByPath(path);
     if (!endpoint) {
-      reqLog({
-        status: 404,
-        method: req.method,
-        path: pathArr.join("/"),
-      });
+      log(404);
       return new Res("Not found", { status: 404 });
     }
     if (req.method !== endpoint.method) {
-      reqLog({
-        status: 405,
-        method: req.method,
-        path: pathArr.join("/"),
-      });
+      log(405);
       return new Res("Method not allowed", { status: 405 });
     }
 
@@ -103,12 +97,7 @@ export class Router {
       request.body = await req.json();
     }
     const response = endpoint.handler(request);
-
-    reqLog({
-      status: response.status,
-      method: req.method,
-      path: pathArr.join("/"),
-    });
+    log(response.status);
     return response;
   }
 }
