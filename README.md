@@ -37,7 +37,7 @@ bun main.ts
     Listening on port 3000...
     10:45:48 PM: 200 GET /product/123
     10:45:52 PM: 200 GET /__endpoints  # special endpoint only available in PRODUCTION=false mode
-    10:46:01 PM: 200 GET /blog/456
+    10:46:01 PM: 200 POST /blog/456
 */
 ```
 
