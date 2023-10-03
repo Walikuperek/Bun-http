@@ -1,6 +1,6 @@
 # http
 
-Very fast HTTP server library based on Bun. Feel free to use it in your projects. Just copy the `lib/src/http.ts` file into your project.
+Very fast HTTP server library based on Bun. Feel free to use it in your projects. Just copy the `lib/src/http`.
 
 ```
 [!] To disable development mode inside your .env file set the PRODUCTION=true environment variable.
