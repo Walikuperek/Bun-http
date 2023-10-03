@@ -1,38 +1,19 @@
-const log = (val: any) => console.assert(Bun.env.PRODUCTION === "true", val);
-const endpointLog = (
-  val: { status?: number; method?: string; path?: string } & { now?: string }
-) => {
-  val = {
-    now: new Date().toLocaleTimeString(),
-    status: 200,
-    method: "GET",
-    path: "/",
-    ...val,
-  };
-  return log(`${val.now}: ${val.status} ${val.method} ${val.path}`);
-};
+import { reqLog } from "./logging";
+import { ImmutableArr } from "./immutable-array";
 
 export class Req extends Request {
+  private _body: any = {};
   public params: { [key: string]: string } = {};
   public query: { [key: string]: string } = {};
+  get body(): any {
+    return this._body;
+  }
+  set body(val: any) {
+    this._body = val;
+  }
 }
 
 export class Res extends Response {}
-
-// Immutable array like structure
-export class ImmutableArr<T> extends Array<T> {
-  constructor(...args: T[]) {
-    super(...args.map((e) => Object.assign({}, e)));
-  }
-
-  override push(...args: T[]) {
-    return super.push(...args.map((e) => Object.assign({}, e)));
-  }
-
-  override unshift(...args: T[]) {
-    return super.unshift(...args.map((e) => Object.assign({}, e)));
-  }
-}
 
 export type Endpoint = {
   path: string; // /blog/:id
@@ -41,17 +22,6 @@ export type Endpoint = {
   method?: string;
 };
 
-/**
- *
- * ```ts
- *   const e: Endpoint = {path: '/'}
- *   const endpoints = new Endpoints(e)
- *   e.path = '/blog'
- *   endpoints.push(e) // can be endpoints.unshift(e) as well
- *   e.path = '/blog/:id' // endpoints are immutable, won't affect any element
- *   console.log(endpoints) // [{"path": "/"}, {"path": "/blog"}]
- * ```
- */
 export class Endpoints extends ImmutableArr<Endpoint> {
   override push(...endpoints: Endpoint[]) {
     endpoints.forEach((e) => (e.pathArr = e.path.split("/")));
@@ -96,24 +66,13 @@ export class Router {
 
   constructor() {
     if (Bun.env.PRODUCTION == "false") {
-      // [DEV] Adds showcase page with all endpoints
-      this.endpoints.push({
-        path: "/__endpoints",
-        handler: (req) =>
-          new Response(
-            "Endpoints:\n" +
-              this.endpoints
-                .filter((e) => !e.path.startsWith("/__"))
-                .map((e) => "  " + e.path)
-                .sort()
-                .join("\n")
-          ),
-      });
+      // [DEV ONLY] Adds showcase page with all endpoints
+      this.endpoints.push(AdminEndpoints.showcase(this.endpoints));
     }
   }
 
   // Request init from Bun
-  route(req: Request) {
+  async route(req: Request) {
     const url = new URL(req.url);
     const path = url.pathname;
     const query = url.searchParams;
@@ -121,20 +80,31 @@ export class Router {
 
     const endpoint = this.endpoints.getByPath(path);
     if (!endpoint) {
-      endpointLog({ status: 404, method: req.method, path: pathArr.join("/") });
+      reqLog({
+        status: 404,
+        method: req.method,
+        path: pathArr.join("/"),
+      });
       return new Res("Not found", { status: 404 });
     }
     if (req.method !== endpoint.method) {
-      endpointLog({ status: 405, method: req.method, path: pathArr.join("/") });
+      reqLog({
+        status: 405,
+        method: req.method,
+        path: pathArr.join("/"),
+      });
       return new Res("Method not allowed", { status: 405 });
     }
 
     const request = new Req(req);
     request.params = Params.fromPathArray(endpoint.pathArr ?? [], pathArr);
     request.query = Object.fromEntries(query.entries());
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      request.body = await req.json();
+    }
     const response = endpoint.handler(request);
 
-    endpointLog({
+    reqLog({
       status: response.status,
       method: req.method,
       path: pathArr.join("/"),
@@ -187,3 +157,30 @@ export const http = {
     });
   },
 };
+
+/**
+ * [DEV ONLY] Adds showcase page with all endpoints
+ */
+class AdminEndpoints {
+  static showcase(endpoints: Endpoint[]): Endpoint {
+    return {
+      path: "/__endpoints",
+      method: "GET",
+      handler: (req) =>
+        new Response(
+          "<h1>Endpoints:</h1>\n<ol>\n" +
+            endpoints
+              .filter((e) => !e.path.startsWith("/__"))
+              .map((e) => "  <li>" + e.path + "</li>")
+              .sort()
+              .join("\n") +
+            "\n</ol>",
+          {
+            headers: {
+              "Content-Type": "text/html",
+            },
+          }
+        ),
+    };
+  }
+}

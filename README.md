@@ -3,7 +3,7 @@
 Very fast HTTP server library based on Bun. Feel free to use it in your projects. Just copy the `lib/src/http.ts` file into your project.
 
 ```
-[!] To disable the HTTP server logs, inside .env file set the PRODUCTION=false environment variable to true.
+[!] To disable the HTTP server logs create .env file next to package.json, inside your .env file set the PRODUCTION=true environment variable.
 ```
 
 ## Usage
@@ -16,16 +16,15 @@ const str = (val: any) => JSON.stringify(val);
 http.get("/", (req) => {
   return new Res(`Hello from home`);
 });
-http.get("/blog", (req) => {
-  return new Res(`Hello from blog`);
-});
-http.post("/blog/:id", (req) => {
-  return new Res(
-    `Create post (params: ${str(req.params)}, query: ${str(req.query)})`
-  );
-});
 http.get("/product/:productId", (req) => {
   return new Res(`Product (id: ${req.params.productId})`);
+});
+http.post("/blog/create", (req) => {
+  return new Res(`
+    params: ${str(req.params)},
+    query: ${str(req.query)},
+    body: ${str(req.body)}
+  `);
 });
 
 const server = http.serve({ port: 3000 });
@@ -33,11 +32,11 @@ console.log(`Listening on port ${server.port}...`);
 
 /* Example output
 bun main.ts
-    [0.11ms] ".env"
+    [0.90ms] ".env"
     Listening on port 3000...
-    10:45:48 PM: 200 GET /product/123
-    10:45:52 PM: 200 GET /__endpoints  # special endpoint only available in PRODUCTION=false mode
-    10:46:01 PM: 200 POST /blog/456
+    8:27:48 PM: 200 GET /
+    8:27:52 PM: 405 GET /blog/123
+    8:27:56 PM: 200 POST /blog/123
 */
 ```
 
@@ -50,7 +49,7 @@ bun install
 To run:
 
 ```bash
-bun run main.ts
+bun main.ts
 ```
 
 This project was created using `bun init` in bun v1.0.1. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.

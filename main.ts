@@ -5,16 +5,15 @@ const str = (val: any) => JSON.stringify(val);
 http.get("/", (req) => {
   return new Res(`Hello from home`);
 });
-http.get("/blog", (req) => {
-  return new Res(`Hello from blog`);
-});
-http.post("/blog/:id", (req) => {
-  return new Res(
-    `Create post (params: ${str(req.params)}, query: ${str(req.query)})`
-  );
-});
 http.get("/product/:productId", (req) => {
   return new Res(`Product (id: ${req.params.productId})`);
+});
+http.post("/blog/create", (req) => {
+  return new Res(`
+    params: ${str(req.params)},
+    query: ${str(req.query)},
+    body: ${str(req.body)}
+  `);
 });
 
 const server = http.serve({ port: 3000 });
