@@ -1,4 +1,8 @@
-# http
+# http library for Bun
+
+![library card from blog](/assets/bun-http-card.png)
+
+> Read [blog post](https://quak.com.pl/learn/bun/build-http-server/) about this library with cool explanation about internals ;)
 
 Very fast HTTP server library based on Bun. Feel free to use it in your projects. Just copy the `lib/src/http`.
 
